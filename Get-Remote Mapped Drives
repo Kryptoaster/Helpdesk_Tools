@@ -1,0 +1,53 @@
+	$ComputerDrives = $textboxComputer.Text + $global:Domain
+	$MappedDrives = Invoke-Command -ComputerName $ComputerDrives -ScriptBlock {
+		function Translate-SIDInformation
+		{
+			Param (
+				[Parameter(Mandatory = $True, Position = 1)]
+				[string]$Principal,
+				[Parameter(Mandatory = $False, Position = 2)]
+				[switch]$Quiet
+			)
+			
+			if ($Principal.StartsWith("S-1-"))
+			{
+				# If principal passed is a SID
+				$objSID = New-Object System.Security.Principal.SecurityIdentifier ($Principal)
+				$objUser = $objSID.Translate([System.Security.Principal.NTAccount])
+				if ($objUser.Value) { return $objUser.Value }
+				elseif (!$Quiet) { Write-Host "The specified SID ($Principal) could not be translated to a friendly name." -ForegroundColor Red }
+			}
+			else
+			{
+				# If principal passed is a friendly account name
+				$objUser = New-Object System.Security.Principal.NTAccount($Principal)
+				$strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+				if ($strSID.Value) { return $strSID.Value }
+				elseif (!$Quiet) { Write-Host "The specified friendly account name ($Principal) could not be translated to a SID. Verify it is correct and try again." -ForegroundColor Red }
+			}
+		}
+		
+		New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | Out-Null
+		cd HKU:
+		
+		$Loggedon = (Get-WmiObject -Class Win32_ComputerSystem | Select-Object UserName).UserName
+		$Domain, $User = $Loggedon.split('\', 2)
+		$SID = Translate-SIDInformation $User
+		
+		$Reg = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('Users', $ComputerDrives)
+		$DLetters = (Get-ChildItem -Path $Reg\$SID\Network | Select PSChildName).PSChildName
+		#$DLetters = $DLetters[1..($DLetters.Length-1)]
+		
+		foreach ($Drive in $DLetters)
+		{
+			$keypath = "$SID\Network\$Drive"
+			$mapping = $Reg.OpenSubKey($Keypath)
+			$Path = $mapping.GetValue("RemotePath")
+			$Drive = $Drive.ToUpper()
+			"`nThe $($Drive): drive is $($Path)"
+		}
+	}
+	
+	$User = Invoke-Command -ComputerName $ComputerDrives -ScriptBlock { (Get-WmiObject -Class Win32_ComputerSystem | Select-Object UserName).UserName }
+	#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+	[void][System.Windows.Forms.MessageBox]::Show("$($User) has the following drives mapped:$($MappedDrives)","Mapped Drives on $($ComputerDrives)") # Casting the method to [void] suppresses the output. 
