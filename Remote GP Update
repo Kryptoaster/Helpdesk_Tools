@@ -1,0 +1,11 @@
+	$GPComputer = $textboxComputer.Text + $global:Domain
+  
+		$Path = "C`$\Windows\System32\GroupPolicy\Machine"
+		
+		Remove-Item -Path "\\$GPComputer\$Path\*" -Recurse -Force
+		Start-Sleep -Seconds 1
+		Invoke-Command -ComputerName $GPComputer {gpupdate /force /wait:0}
+		#Invoke-GPUpdate -Computer $GPComputer -Force
+		
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("Succesfully ran a GPUpdate on $($GPComputer)", 'Group Policy Results') # Casting the method to [void] suppresses the output. 
