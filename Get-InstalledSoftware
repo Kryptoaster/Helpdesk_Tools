@@ -1,0 +1,5 @@
+	$Comp = $textboxComputer.Text + $global:Domain
+	$User = (Get-WmiObject -Class Win32_ComputerSystem -ComputerName $Comp | Select-Object UserName).UserName
+	$Hostname = (Get-WmiObject -Class Win32_ComputerSystem -ComputerName $Comp | Select-Object DNSHostName).DNSHostName
+	$Software = ((Get-WmiObject -Class Win32_InstalledWin32Program -ComputerName $Hostname).Name)
+	$Software | Out-GridView -Title "Installed Software for $Comp"
