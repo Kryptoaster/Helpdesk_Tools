@@ -1,0 +1,41 @@
+	$ComputerOffice = $textboxComputer.Text + $global:Domain
+	$Office365 = "C`$\Program Files\Microsoft Office\root"
+	$Reg = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine', $ComputerOffice)
+	$keypath = "SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
+	$netbackup = $Reg.OpenSubKey($keypath)
+	$KeyValue = $netbackup.GetValue("ClientVersionToReport")
+	$ChannelPath = $netbackup.GetValue("AudienceId")
+	if (Test-Path "\\$ComputerOffice\$Office365")
+	{
+		#Detect office 365 Update Channel
+		#region
+		If ($ChannelPath = "7ffbc6bf-bc32-4f92-8982-f9dd17fd3114")
+		{
+			$Channel = "Semi-Annual"
+		}
+		elseif ($ChannelPath = "492350f6-3a01-4f97-b9c0-c7c6ddf67d60")
+		{
+			$Channel = "Monthly"
+		}
+		elseif ($ChannelPath = "64256afe-f5d9-4f86-8936-8840a6a4f5be")
+		{
+			$Channel = "Monthly (Targeted)"
+		}
+		elseif ($ChannelPath = "b8f9b850-328d-4355-9145-c59439a0c4cf")
+		{
+			$Channel = "Semi-Annual (Targeted)"
+		}
+		else
+		{
+			$Channel = "Unkown Channel"
+		}
+		#endregion
+		#Here
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("Office 365 is installed.`nOffice Version: $KeyValue`nOffice Update Channel: $Channel", "Office Results") # Casting the method to [void] suppresses the output. 
+	}
+	else
+	{
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("Office 365 is not installed.", "Office Results") # Casting the method to [void] suppresses the output. 
+	}
