@@ -1,0 +1,15 @@
+	$ComputerName = $textboxComputer.Text + $global:Domain
+	
+	$SMB1 = (Invoke-Command -ComputerName $ComputerName -ScriptBlock { Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol }).State
+	
+	if ($SMB1 -match "Enabled")
+	{
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("SMBv1 is already enabled on $($ComputerName)", "SMBv1 Already Enabled") # Casting the method to [void] suppresses the output. 
+	}
+	else
+	{
+		Invoke-Command -ComputerName $ComputerName -ScriptBlock { & cmd /c Dism /Online /Enable-Feature /FeatureName:SMB1Protocol /All /NoRestart }
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("SMBv1 is enabled pending a reboot on $($ComputerName)", "SMBv1 Enabled") # Casting the method to [void] suppresses the output. 
+	}
