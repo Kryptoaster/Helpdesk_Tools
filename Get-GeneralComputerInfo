@@ -1,0 +1,55 @@
+	$Computer = $textboxComputer.Text + $global:Domain
+	$BIOS = (Get-WmiObject win32_bios -computer $Computer).SMBIOSBIOSVersion
+	$BDate = Invoke-Command -ComputerName $Computer -ScriptBlock { Systeminfo | findstr /C:BIOS }
+	$BDate = $BDate.split(",").Trim() | select -Index 1
+	$Manu = (Get-WmiObject Win32_Computersystem -computer $Computer).Manufacturer
+	$Model = (Get-WmiObject Win32_Computersystem -computer $Computer).Model
+	$SN = (Get-WmiObject win32_bios -computer $computer).SerialNumber
+	$OSV = (Get-WmiObject Win32_OperatingSystem -Computer $Computer).Version
+	$INum = $null
+	$SIMICCID = $null
+	
+	if ($Model -like "*Surface*" -and $Model -notlike "*Laptop*" -and $Model -notlike "*Studio*" -and $Model -notlike "*Book*" -and $Model -notlike "*Pro 4*" -and $Model -notlike "*Pro 3*")
+	{
+		$IMEI = Invoke-Command -ComputerName $Computer -ScriptBlock { & cmd /c 'netsh mbn show interface' }
+		$Object = New-Object -TypeName "PSObject"
+		
+		ForEach ($Line in $IMEI)
+		{
+			If (!([String]::IsNullOrEmpty($Line)))
+			{
+				$Line = $Line.Split(":").Trim()
+				If ($Line[0] -like "Device*Id*") { $Object | Add-Member -MemberType NoteProperty -Name "IMEI" -Value "$($Line[1])" -Force }
+				If ($Line[0] -like "SIM*ICC*ID") { $Object | Add-Member -MemberType NoteProperty -Name "SIMICCID" -Value "$($Line[1])" -Force }
+			}
+		}
+		[Array]$Output += $Object
+		
+		$INum= $Object.IMEI
+		$SIMICCID = $Object.SIMICCID
+		$Object = $null
+	}
+	
+	if ($INum -eq $null -and $SIMICCID -eq $null)
+	{
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("BIOS Version: $($BIOS)`nBIOS Release Date: $($BDate)`nManufacturer: $($Manu)`nComputer Model: $($Model)`nSerial Number: $($SN)`nOS Build Version: $($OSV)", "$($Computer) Information") # Casting the method to [void] suppresses the output. 
+	}
+	elseif ($INum -ne $null -and $SIMICCID -eq $null)
+	{
+		Set-Clipboard -Value $INum
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("BIOS Version: $($BIOS)`nBIOS Release Date: $($BDate)`nManufacturer: $($Manu)`nComputer Model: $($Model)`nSerial Number: $($SN)`nOS Build Version: $($OSV)`nIMEI: $($INum)`nIMEI Copied to Clipboard", "$($Computer) Information") # Casting the method to [void] suppresses the output. 
+	}
+	elseif ($INum -eq $null -and $SIMICCID -ne $null)
+	{
+		Set-Clipboard -Value $SIMICCID
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("BIOS Version: $($BIOS)`nBIOS Release Date: $($BDate)`nManufacturer: $($Manu)`nComputer Model: $($Model)`nSerial Number: $($SN)`nOS Build Version: $($OSV)`nSIMICCID: $($SIMICCID)`nSIMICCID Copied to Clipboard", "$($Computer) Information") # Casting the method to [void] suppresses the output. 
+	}
+	else
+	{
+		Set-Clipboard -Value $INum
+		#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+		[void][System.Windows.Forms.MessageBox]::Show("BIOS Version: $($BIOS)`nBIOS Release Date: $($BDate)`nManufacturer: $($Manu)`nComputer Model: $($Model)`nSerial Number: $($SN)`nOS Build Version: $($OSV)`nIMEI: $($INum)`nSIMICCID: $($SIMICCID)`nIMEI Copied to Clipboard", "$($Computer) Information") # Casting the method to [void] suppresses the output. 
+	}
