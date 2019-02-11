@@ -1,0 +1,59 @@
+	$Computer = $textboxComputer.Text + $global:Domain
+	
+	Invoke-Command -ComputerName $Computer {
+		if (Get-Process -Name iexplore)
+		{
+			Stop-Process -Name iexplore -Force
+		}
+		if (Get-Process -ProcessName mstsc)
+		{
+			Stop-Process -ProcessName mstsc -Force
+		}
+	}
+	
+	TS-Fix -Computer $Computer
+
+function TS-Fix
+{
+	[CmdletBinding()]
+	Param (
+		[Parameter(Position = 0, ValueFromPipeline = $true, Mandatory = $true)]
+		[Alias("CN", "Computer")]
+		[String[]]$ComputerName
+	)
+	#Take ownership and grant Full Control of System32 and sysWOW64
+	@("\\$ComputerName\c$\Windows\System32", "\\$ComputerName\c$\Windows\SysWOW64") | % {
+		$acl = get-acl $_
+		$identity = [System.Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+		$acl.SetOwner($identity)
+		$acl | set-acl -path $_
+	}
+	
+	#Take ownership of files under System32 and sysWOW64
+	@("\\$ComputerName\c$\Windows\System32\mstsc.exe", "\\$ComputerName\c$\Windows\System32\mstscax.dll", "\\$ComputerName\c$\Windows\sysWOW64\mstsc.exe", "\\$ComputerName\c$\Windows\sysWOW64\mstscax.dll") | % {
+		$acl = get-acl $_
+		$acl.SetOwner($identity)
+		
+		$typeAllow = [System.Security.AccessControl.AccessControlType]::Allow
+		$fullcontrol = [System.Security.AccessControl.FileSystemRights]::FullControl
+		$accessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($identity, $fullcontrol, $typeAllow)
+		
+		$acl.AddAccessRule($accessRule)
+		$acl | set-acl $_
+	}
+	
+	#Remove files after taking ownership
+	Remove-Item "\\$ComputerName\c$\Windows\System32\mstsc.exe" -Force
+	Remove-Item "\\$ComputerName\c$\Windows\System32\mstscax.dll" -Force
+	Remove-Item "\\$ComputerName\c$\Windows\SysWOW64\mstsc.exe" -Force
+	Remove-Item "\\$ComputerName\c$\Windows\SysWOW64\mstscax.dll" -Force
+	
+  $Server = "ServerName"
+  
+	#Copy 10.0.15063 files to replace files that were removed
+	Copy-Item -Path "\\$Server\TSFix\System32\mstsc.exe" -Destination "\\$ComputerName\c$\Windows\System32\" -Force
+	Copy-Item -Path "\\$Server\TSFix\System32\mstscax.dll" -Destination "\\$ComputerName\c$\Windows\System32\" -Force
+	Copy-Item -Path "\\$Server\TSFix\SysWOW64\mstsc.exe" -Destination "\\$ComputerName\c$\Windows\SysWOW64\" -Force
+	Copy-Item -Path "\\$Server\TSFix\SysWOW64\mstscax.dll" -Destination "\\$ComputerName\c$\Windows\SysWOW64\" -Force
+	
+}
