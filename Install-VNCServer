@@ -1,0 +1,50 @@
+	$Computer = $textboxComputer.Text + $global:Domain
+  $Server = "ServerName"
+	Copy-Item -Path "\\$Server\VNC_6.2.0_Server" -Destination "\\$Computer\C$\Software" -Recurse -Force
+	
+	$SB1 = {
+		$VNCMirror = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Mirro%'"
+		$VNCEnterprise = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Enterprise%'"
+		$VNCPrint = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Print%'"
+		$VNCServer = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Server%'"
+		if ($VNCMirror)
+		{
+			$VNCMirror.Uninstall()
+		}
+		if ($VNCEnterprise)
+		{
+			$VNCEnterprise.Uninstall()
+		}
+		if ($VNCPrint)
+		{
+			$VNCPrint.Uninstall()
+		}
+		if ($VNCServer)
+		{
+			$VNCServer.Uninstall()
+		}
+	}
+	
+	Invoke-Command -ComputerName $Computer -ScriptBlock $SB1
+	
+	Start-Sleep -Seconds 1
+	
+	$SB2 = {
+		if (Test-Path "HKLM:\Software\RealVNC")
+		{
+			Remove-Item -Recurse "HKLM:\Software\RealVNC"
+		}
+	}
+	Invoke-Command -ComputerName $Computer -ScriptBlock $SB2
+	
+	Start-Sleep -Seconds 1
+	
+	$SB3 = { & cmd /c 'C:\Windows\System32\msiexec.exe /i C:\Software\VNC_6.2.0_Server\VNC-Server-6.2.0-Windows.msi transforms=VNC-Server-6.2.0.mst /qn /norestart' }
+	Invoke-Command -ComputerName $computer -ScriptBlock $SB3
+	
+	Start-Sleep -Seconds 2
+	
+	Restart-Service -Name vncserver -Force
+	
+	#Add-Type -AssemblyName "System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+	[void][System.Windows.Forms.MessageBox]::Show("VNC Setup finished`nPlease Verify VNC connectivity", "VNC Server Installer") # Casting the method to [void] suppresses the output. 
