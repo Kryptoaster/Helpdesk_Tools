@@ -3,26 +3,9 @@
 	Copy-Item -Path "\\$Server\VNC_6.2.0_Server" -Destination "\\$Computer\C$\Software" -Recurse -Force
 	
 	$SB1 = {
-		$VNCMirror = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Mirro%'"
-		$VNCEnterprise = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Enterprise%'"
-		$VNCPrint = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Print%'"
-		$VNCServer = Get-WmiObject Win32_product -Filter "Name LIKE '%VNC Server%'"
-		if ($VNCMirror)
-		{
-			$VNCMirror.Uninstall()
-		}
-		if ($VNCEnterprise)
-		{
-			$VNCEnterprise.Uninstall()
-		}
-		if ($VNCPrint)
-		{
-			$VNCPrint.Uninstall()
-		}
-		if ($VNCServer)
-		{
-			$VNCServer.Uninstall()
-		}
+		$VNCServer = Get-WMIObject win32reg_addremoveprograms -Filter "DisplayName LIKE '%VNC Server%'" -Property *
+		$VNCProdID = $VNCServer.ProdID
+		msiexec /x $VNCProdID /qn | Out-Null
 	}
 	
 	Invoke-Command -ComputerName $Computer -ScriptBlock $SB1
